@@ -1,0 +1,10 @@
+Optimizer - SGD, Accuracy < 50%
+Optimizer - Adam, Activation function - LeakyRelu       Accuracy = 60.45% (50 epochs)
+Optimizer - Adam, Activation function - Tanh            Accuracy = 62.28% (50 epochs)
+
+
+Alexnet finetuning              Accuracy = 
+Alexnet feature extraction      Accuracy = 
+
+CNN MNIST                       Accuracy = 
+CNN SVIIN                       Accuracy = 
