@@ -6,6 +6,7 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
+import copy
 
 
 
@@ -41,13 +42,15 @@ def get_data_loaders(train_batch_size, val_batch_size, test_batch_size):
     return train_loader, val_loader, test_loader
 
 
-def train_and_validate(model, num_epochs, optimizer, criterion, trainloader, valloader, log_dir=r"lab0/logs"):
+def train_and_validate(model, num_epochs, optimizer, criterion, trainloader, valloader, log_dir=r"lab0/logs", patience=5):
     print("Training")
     best_val_loss = float('inf')  # Initialize best validation loss as infinity
+    stop_count = 0  # Initialize the counter for early stopping
+    early_stopping_triggered = False
 
     writer = SummaryWriter(log_dir=log_dir)
+    best_model_state = None  # To store the state of the best model
 
-    best_model_state = None
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -60,12 +63,10 @@ def train_and_validate(model, num_epochs, optimizer, criterion, trainloader, val
             optimizer.step()
             running_loss += loss.item()
             
-            # Print the training loss every 20 mini-batches; this updates the same line
-            if i % 20 == 19:  # Adjust the modulus value to change frequency
+            if i % 20 == 19:  # Print training loss every 20 mini-batches
                 print(f'\rEpoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(trainloader)}], Loss: {running_loss / (i+1):.4f}', end="")
         print()
         avg_train_loss = running_loss / len(trainloader)
-        print(f'Epoch {epoch + 1}, Training Loss: {avg_train_loss}')
         writer.add_scalar('Training Loss', avg_train_loss, epoch)
 
         model.eval()
@@ -78,21 +79,31 @@ def train_and_validate(model, num_epochs, optimizer, criterion, trainloader, val
                 val_loss += loss.item()
 
         avg_val_loss = val_loss / len(valloader)
-        print(f'Epoch {epoch + 1}, Validation Loss: {avg_val_loss}')
         writer.add_scalar('Validation Loss', avg_val_loss, epoch)
 
-        
-        # Save the model if it has the best validation loss so far
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            best_model_state = model.state_dict().copy()  # Deep copy the model state
+            best_model_state = copy.deepcopy(model.state_dict())  # Deep copy the model state
+            stop_count = 0  # Reset the early stopping counter
             print(f'New best model found at epoch {epoch + 1} with validation loss: {best_val_loss}')
-    
+        else:
+            stop_count += 1  # Increment the counter if no improvement
+            print(f'No improvement in validation loss for epoch {epoch+1}. Early stopping counter: {stop_count}/{patience}')
+            
+            if stop_count >= patience:
+                print(f'Early stopping triggered at epoch {epoch + 1}. No improvement in validation loss for {patience} consecutive epochs.')
+                early_stopping_triggered = True
+                break  # Break out of the loop to stop training
+
+    # Load the best model state if early stopping was triggered
+    if early_stopping_triggered:
+        print("Loading the best model state due to early stopping.")
+        model.load_state_dict(best_model_state)
+        return model
     model.load_state_dict(best_model_state)
     print("Finished Training and Validation")
-    writer.close()  # Close the summary writer
+    writer.close()
     return model
-
 
 def test(model,testloader):
     correct = 0
@@ -152,19 +163,23 @@ class CIFAR10CNN_tanh(nn.Module):
 lr_net = CIFAR10CNN_lr()
 tanh_net = CIFAR10CNN_tanh()
 
+lr = 0.0001
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(tanh_net.parameters(), lr = 0.0001)
+
+optimizer_lr = optim.Adam(lr_net.parameters(), lr = lr)
+
+optimizer_tanh = optim.Adam(tanh_net.parameters(), lr = lr)
 
 
 train_loader, val_loader, test_loader = get_data_loaders(64, 64, 64)
 
-
+num_epochs = 50
 if __name__ == '__main__':
     print("="*50)
-    trained_model = train_and_validate(lr_net, 20, optimizer, criterion, train_loader, val_loader)
+    trained_model = train_and_validate(lr_net, num_epochs, optimizer_lr, criterion, train_loader, val_loader)
     test(trained_model, test_loader)
     print("="*50)
-    trained_model = train_and_validate(tanh_net, 20, optimizer, criterion, train_loader, val_loader)
+    trained_model = train_and_validate(tanh_net, num_epochs, optimizer_tanh, criterion, train_loader, val_loader)
     test(trained_model, test_loader)
     print("="*50)
