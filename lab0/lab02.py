@@ -108,15 +108,16 @@ def train_and_validate(model, num_epochs, optimizer, criterion, trainloader, val
 
         if stop_count >= patience:
             print(f"Early stopping triggered at epoch {epoch + 1}. No improvement in validation loss for {patience} consecutive epochs.")
-            early_stop = True
             break  # Stop training
 
-    if not early_stop:
-        model.load_state_dict(best_model_state)  # Load best model state if early stopping wasn't triggered
+    model.load_state_dict(best_model_state)
 
     print("Finished Training and Validation")
     writer.close()
     return model
+
+
+
 tf = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -136,9 +137,6 @@ alexnet.classifier = nn.Sequential(
 )
 
 
-criterion = nn.CrossEntropyLoss()
-
-optimizer = optim.Adam(alexnet.parameters(), lr = 0.0001)
 
 
 for param in alexnet_fe.parameters():
@@ -149,9 +147,18 @@ alexnet_fe.classifier = nn.Sequential(
     nn.Linear(4096, 10)  # New layer, by default has requires_grad=True
 )
 
-optimizer_fe = optim.Adam(alexnet_fe.classifier[-1].parameters(), lr=0.0001)
-
 batch_size = 64
+
+lr = 0.0001
+
+
+criterion = nn.CrossEntropyLoss()
+
+optimizer = optim.Adam(alexnet.parameters(), lr = lr)
+
+optimizer_fe = optim.Adam(alexnet_fe.classifier[-1].parameters(), lr = lr)
+
+
 
 train_loader, val_loader, test_loader = get_data_loaders(batch_size, batch_size, batch_size, transform = tf)
 
