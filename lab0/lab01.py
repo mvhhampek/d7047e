@@ -118,12 +118,13 @@ class CIFAR10CNN_lr(nn.Module):
         self.fc1 = nn.Linear(16 * 5 * 5, 120)  # Adjusted for the size after convolutions and pooling
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)  # Output layer for 10 classes
+
     def forward(self,x):
-        x = self.pool(F.tanh(self.conv1(x)))
-        x = self.pool(F.tanh(self.conv2(x)))
+        x = self.pool(F.leaky_relu(self.conv1(x)))
+        x = self.pool(F.leaky_relu(self.conv2(x)))
         x = x.view(-1,16*5*5) # flatten tensor for fc layers
-        x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
+        x = F.leaky_relu(self.fc1(x))
+        x = F.leaky_relu(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -137,6 +138,7 @@ class CIFAR10CNN_tanh(nn.Module):
         self.fc1 = nn.Linear(16 * 5 * 5, 120)  # Adjusted for the size after convolutions and pooling
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)  # Output layer for 10 classes
+        
     def forward(self,x):
         x = self.pool(F.tanh(self.conv1(x)))
         x = self.pool(F.tanh(self.conv2(x)))
@@ -159,5 +161,10 @@ train_loader, val_loader, test_loader = get_data_loaders(64, 64, 64)
 
 
 if __name__ == '__main__':
-    trained_model = train_and_validate(tanh_net, 50, optimizer, criterion, train_loader, val_loader)
+    print("="*50)
+    trained_model = train_and_validate(lr_net, 20, optimizer, criterion, train_loader, val_loader)
     test(trained_model, test_loader)
+    print("="*50)
+    trained_model = train_and_validate(tanh_net, 20, optimizer, criterion, train_loader, val_loader)
+    test(trained_model, test_loader)
+    print("="*50)
