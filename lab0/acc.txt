@@ -3,8 +3,8 @@ Optimizer - Adam, Activation function - LeakyRelu       Accuracy = 60.06% (62 ep
 Optimizer - Adam, Activation function - Tanh            Accuracy = 63.16% (70 epochs)
 
 
-Alexnet finetuning              Accuracy = 89.15
-Alexnet feature extraction      Accuracy = 
+Alexnet finetuning              Accuracy = 89.15% (9 epochs) sussy
+Alexnet feature extraction      Accuracy = 83.21% (39 epochs)
 
 CNN MNIST                       Accuracy = 
 CNN SVIIN                       Accuracy = 
