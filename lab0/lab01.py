@@ -79,7 +79,9 @@ def train_and_validate(model, num_epochs, optimizer, criterion, trainloader, val
                 val_loss += loss.item()
 
         avg_val_loss = val_loss / len(valloader)
+        #print(f'Epoch {epoch + 1}, Validation Loss: {avg_val_loss}')
         writer.add_scalar('Validation Loss', avg_val_loss, epoch)
+
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
@@ -174,7 +176,7 @@ optimizer_tanh = optim.Adam(tanh_net.parameters(), lr = lr)
 
 train_loader, val_loader, test_loader = get_data_loaders(64, 64, 64)
 
-num_epochs = 50
+num_epochs = 100
 if __name__ == '__main__':
     print("="*50)
     trained_model = train_and_validate(lr_net, num_epochs, optimizer_lr, criterion, train_loader, val_loader)

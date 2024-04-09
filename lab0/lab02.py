@@ -143,8 +143,8 @@ for param in alexnet_fe.parameters():
     param.requires_grad = False
 
 alexnet_fe.classifier = nn.Sequential(
-    *list(alexnet_fe.classifier.children()),  # Original layers, now frozen
-    nn.Linear(4096, 10)  # New layer, by default has requires_grad=True
+    *list(alexnet_fe.classifier.children())[:-1],  # Keep all but the original last layer
+    nn.Linear(4096, 10)  # New layer for CIFAR-10
 )
 
 batch_size = 64
@@ -164,5 +164,5 @@ train_loader, val_loader, test_loader = get_data_loaders(batch_size, batch_size,
 
 if __name__ == '__main__':
     start_time = time.time()
-    trained_model = train_and_validate(alexnet, 50, optimizer, criterion, train_loader, val_loader)
+    trained_model = train_and_validate(alexnet_fe, 50, optimizer_fe, criterion, train_loader, val_loader)
     test(trained_model, test_loader)
