@@ -133,12 +133,12 @@ alexnet_fe = models.alexnet(weights=models.AlexNet_Weights.DEFAULT)
 
 alexnet.classifier = nn.Sequential(
     *list(alexnet.classifier.children())[:-1],  # Retain all but the last original classifier layer
-    nn.Linear(4096, 10)  # Add your new layer correctly expecting 4096 inputs, outputting 10 classes
+    nn.Linear(4096, 10)  # Add your new layer expecting 4096 inputs, outputting 10 classes
 )
 
 
 
-
+# Freeze parameters
 for param in alexnet_fe.parameters():
     param.requires_grad = False
 

@@ -125,11 +125,17 @@ def test(model,testloader):
 class CIFAR10CNN_lr(nn.Module):
     def __init__(self):
         super(CIFAR10CNN_lr, self).__init__()
+        # First convolutional layer takes 3-channel images (RGB), outputs 6 feature maps with a 5x5 kernel.
         self.conv1 = nn.Conv2d(3,6,5) #3 because rgb
+        # Max pooling layer with a 2x2 window and stride 2 to reduce spatial dimensions.
         self.pool = nn.MaxPool2d(2, 2)
+        # Second convolutional layer takes the 6 feature maps as input and outputs 16 with a 5x5 kernel.
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)  # Adjusted for the size after convolutions and pooling
+         # First fully connected layer: flattens the output of the second conv layer to 1D and maps to 120 features.
+        self.fc1 = nn.Linear(16 * 5 * 5, 120) 
+        # Second fully connected layer: maps 120 features to 84 features.
         self.fc2 = nn.Linear(120, 84)
+        # Third (output) fully connected layer: maps 84 features to the 10 CIFAR-10 class labels.
         self.fc3 = nn.Linear(84, 10)  # Output layer for 10 classes
 
     def forward(self,x):
