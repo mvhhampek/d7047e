@@ -125,11 +125,11 @@ def chatbot_response(prediction):
     negative = 0
 
     chatbot_responses: dict[int, tuple[str, str]] = {
-        positive: ("Positivt",
-                          "yey"),
+        positive: ("Positive",
+                          "Good review"),
 
-        negative: ("Negativt",
-                         "ney")
+        negative: ("Negative",
+                         "Bad review")
     }  
 
     return chatbot_responses[prediction.item()][random.randint(0, 1)]
@@ -188,7 +188,7 @@ def main():
     print(f"\nType 'exit' to end the conversation.",
           sep="\n")
 
-    print("Bot: Hello")
+    print("Bot: Give a reivew.")
 
     while True:
         text = input("User: ")
