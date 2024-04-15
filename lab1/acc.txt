@@ -1,0 +1,16 @@
+Task 1_1, LSTM : 81.5% accuracy
+
+Task 1_2, Transformer: 62.00% accuracy
+
+Task 1_3: Compare the performance of the two models and explain in which scenarios
+you would prefer one over the other.
+    How did the two models’ complexity, accuracy, and efficiency differ? Did
+    one model outperform the other in specific scenarios or tasks? If so, why?
+        LSTMs bra för small-medium datasets, Transformer bra för stora dataset
+        Transformer är mycket mer komplex med fler parametrar
+        Transformer är mycket mer effektiv att träna, går fortare
+        
+
+
+    What insights did you obtain concerning data amount to train? Embed-
+    diutilizedised? Architectural choices made?

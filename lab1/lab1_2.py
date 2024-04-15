@@ -254,15 +254,13 @@ def main():
     BATCH_SIZE = 32
 
     train_loader, val_loader, test_loader = create_dataloaders(train_x, train_y, val_x, val_y, test_x, test_y, batch_size=BATCH_SIZE)
-    print(len(train_loader))
-    print(len(val_loader))
-    print(len(test_loader))
+
 
     ntokens = len(vocab)  # size of vocabulary
-    emsize = 200  # embedding dimension
-    d_hid = 300  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+    emsize = 256  # embedding dimension
+    d_hid = 512  # dimension of the feedforward network model in ``nn.TransformerEncoder``
     nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
-    nhead = 4  # number of heads in ``nn.MultiheadAttention``
+    nhead = 8  # number of heads in ``nn.MultiheadAttention``
     dropout = 0.5  # dropout probability
     model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
     print("Model initialized")
