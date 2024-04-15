@@ -208,7 +208,7 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
     
 
-def prep_user_input(user_input, vectorizer):
+def prep_user_input(user_input, vocab, tokenizer):
     # Preprocess user input
     user_input = user_input.lower()
     user_input = re.sub(r'[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_.]+', '', user_input)  # remove emails
@@ -219,13 +219,25 @@ def prep_user_input(user_input, vectorizer):
     filtered_sent = [w for w in word_tokens if not w in stopwords.words('english')]
     processed_input = " ".join(filtered_sent)
 
-    # Vectorize user input using the provided TF-IDF vectorizer
-    user_tfidf = vectorizer.transform([processed_input])
+    # # Vectorize user input using the provided TF-IDF vectorizer
+    # user_tfidf = vectorizer.transform([processed_input])
 
-    # Convert to PyTorch tensor
-    user_tensor = torch.tensor(user_tfidf.toarray(), dtype=torch.float32)
+    # # Convert to PyTorch tensor
+    # user_tensor = torch.tensor(user_tfidf.toarray(), dtype=torch.float32)
+    user_tensor = data_process_single(processed_input,vocab, tokenizer)
 
     return user_tensor
+
+def data_process_single(raw_text, vocab, tokenizer):
+    # Tokenize the raw text
+    tokenized_text = vocab(tokenizer(raw_text))
+    
+    # Convert tokens to tensor and add padding
+    tensor_text = torch.tensor(tokenized_text, dtype=torch.long)
+    max_length = len(tensor_text)
+    padded_text = torch.nn.functional.pad(tensor_text, (0, max_length - len(tensor_text)), value=vocab["<pad>"])
+    
+    return padded_text
 
 def chatbot_response(prediction):
     positive = 1
@@ -244,12 +256,11 @@ def chatbot_response(prediction):
 
 def main():
 
-    
-    train_x, train_y, val_x, val_y, vocab, test_x, test_y, word_vectorizer = data_loading_code.get_data_transformer()
+    train_x, train_y, val_x, val_y, test_x, test_y, vocab, tokenizer = data_loading_code.get_data_transformer()
  
 
 
-    NUM_EPOCHS = 50
+    NUM_EPOCHS = 2
     LEARNING_RATE = 1e-3
     BATCH_SIZE = 32
 
@@ -282,7 +293,7 @@ def main():
         text = input("User: ")
         if text == "exit":
             break
-        user_prompt = prep_user_input(text, word_vectorizer)
+        user_prompt = prep_user_input(text, vocab, tokenizer)
 
         output = model(user_prompt)
         _, predicted = torch.max(output, 1)
