@@ -208,7 +208,7 @@ class PositionalEncoding(nn.Module):
     
 
 def prep_user_input(user_input, vectorizer):
-        # Preprocess user input
+    # Preprocess user input
     user_input = user_input.lower()
     user_input = re.sub(r'[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_.]+', '', user_input)  # remove emails
     user_input = re.sub(r'((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}', '', user_input)  # remove IP address
@@ -244,7 +244,7 @@ def chatbot_response(prediction):
 def main():
 
     
-    train_x, train_y, val_x, val_y, vocab, test_x, test_y = data_loading_code.get_data_transformer()
+    train_x, train_y, val_x, val_y, vocab, test_x, test_y, word_vectorizer = data_loading_code.get_data_transformer()
  
 
 
@@ -271,23 +271,22 @@ def main():
 
 
 
-    # model.eval()
+    model.eval()
 
-    # print(f"\nType 'exit' to end the conversation.",
-    #       sep="\n")
+    print(f"\nType 'exit' to end the conversation.",
+          sep="\n")
 
-    # print("Bot: Give a reivew.")
+    print("Bot: Give a reivew.")
 
-    # while True:
-    #     text = input("User: ")
-    #     if text == "exit":
-    #         break
-    #     user_prompt = prep_user_input(text, word_vectorizer)
+    while True:
+        text = input("User: ")
+        if text == "exit":
+            break
+        user_prompt = prep_user_input(text, word_vectorizer)
 
-    #     output = model(user_prompt)
-    #     _, predicted = torch.max(output, 1)
-
-    #     print("Bot:", chatbot_response(predicted), sep=" ")
+        output = model(user_prompt)
+        _, predicted = torch.max(output, 1)
+        print("Bot:", chatbot_response(predicted), sep=" ")
 
 if __name__ == "__main__":
     main()
