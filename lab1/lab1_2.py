@@ -40,7 +40,7 @@ class TextDataset(Dataset):
 
     def __getitem__(self, idx):
         """Return a single item from the dataset."""
-        return self.text_data[:, idx], self.labels[idx]
+        return self.text_data[idx, :], self.labels[idx]
 
 def create_dataloaders(train_data, train_labels, val_data, val_labels, test_data, test_labels, batch_size=32):
     """
@@ -55,6 +55,7 @@ def create_dataloaders(train_data, train_labels, val_data, val_labels, test_data
         Three DataLoader instances for the training, validation, and test datasets.
     """
     # Create Dataset instances
+
     train_dataset = TextDataset(train_data, train_labels)
     val_dataset = TextDataset(val_data, val_labels)
     test_dataset = TextDataset(test_data, test_labels)
@@ -249,21 +250,20 @@ def main():
 
 
     NUM_EPOCHS = 50
-    LEARNING_RATE = 1e-4
+    LEARNING_RATE = 1e-3
     BATCH_SIZE = 32
 
     train_loader, val_loader, test_loader = create_dataloaders(train_x, train_y, val_x, val_y, test_x, test_y, batch_size=BATCH_SIZE)
 
 
-
     ntokens = len(vocab)  # size of vocabulary
-    emsize = 200  # embedding dimension
-    d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+    emsize = 256  # embedding dimension
+    d_hid = 512  # dimension of the feedforward network model in ``nn.TransformerEncoder``
     nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
-    nhead = 2  # number of heads in ``nn.MultiheadAttention``
+    nhead = 8  # number of heads in ``nn.MultiheadAttention``
     dropout = 0.5  # dropout probability
     model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
-
+    print("Model initialized")
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss()
     model.train_model(NUM_EPOCHS, optimizer, criterion, train_loader, val_loader)

@@ -79,11 +79,17 @@ def build_vocab(data, tokenizer):
     vocab.set_default_index(vocab["<unk>"])
     return vocab
 
-def data_process(raw_text_iter, vocab, tokenizer):
+def data_process1(raw_text_iter, vocab, tokenizer):
     data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
     return torch.nn.utils.rnn.pad_sequence(data, padding_value=vocab["<pad>"])
 
 
+
+def data_process(raw_text_iter, vocab, tokenizer):
+    data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
+    max_length = max(len(sequence) for sequence in data)
+    padded_data = [torch.nn.functional.pad(sequence, (0, max_length - len(sequence)), value=vocab["<pad>"]) for sequence in data]
+    return torch.stack(padded_data)
 
 def get_data_test():
     # get data, pre-process and split
@@ -164,6 +170,12 @@ def get_data_transformer():
         X_train_val, y_train_val, test_size=0.25, random_state=0, shuffle=True
     )
 
+
+    train_tensor = data_process(train_data, vocab, tokenizer)
+    val_tensor = data_process(val_data, vocab, tokenizer)
+    test_tensor = data_process(test_data, vocab, tokenizer)
+
+
     # Convert labels to tensors
     train_labels = torch.tensor(y_train.values, dtype=torch.long)
     val_labels = torch.tensor(y_val.values, dtype=torch.long)
@@ -183,4 +195,4 @@ def get_data_transformer():
 # If this is the primary file that is executed (ie not an import of another file)
 if __name__ == "__main__":
     
-    train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer = get_data()
+    train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer = get_data_transformer()
