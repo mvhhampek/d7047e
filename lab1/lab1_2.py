@@ -2,6 +2,12 @@ import math
 import os
 from tempfile import TemporaryDirectory
 from typing import Tuple
+import random
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
+import torch
+import copy
+
 
 import torch
 from torch import nn, Tensor
@@ -13,9 +19,53 @@ import re
 from nltk import word_tokenize
 from nltk.corpus import stopwords
 from data import data_loading_code
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, Dataset
 
 device="cpu"
+
+class TextDataset(Dataset):
+    """Dataset class for text data and labels."""
+    def __init__(self, text_data, labels):
+        """
+        Args:
+            text_data (Tensor): Padded sequence of token indices.
+            labels (Tensor): Labels corresponding to the text data.
+        """
+        self.text_data = text_data
+        self.labels = labels
+
+    def __len__(self):
+        """Return the number of items in the dataset."""
+        return self.text_data.size(0)
+
+    def __getitem__(self, idx):
+        """Return a single item from the dataset."""
+        return self.text_data[:, idx], self.labels[idx]
+
+def create_dataloaders(train_data, train_labels, val_data, val_labels, test_data, test_labels, batch_size=32):
+    """
+    Creates DataLoader instances for training, validation, and testing datasets.
+    
+    Args:
+        train_data, val_data, test_data: Tensors of padded sequences of token indices.
+        train_labels, val_labels, test_labels: Tensors of labels.
+        batch_size (int): Number of samples per batch.
+        
+    Returns:
+        Three DataLoader instances for the training, validation, and test datasets.
+    """
+    # Create Dataset instances
+    train_dataset = TextDataset(train_data, train_labels)
+    val_dataset = TextDataset(val_data, val_labels)
+    test_dataset = TextDataset(test_data, test_labels)
+
+    # Create DataLoaders
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader, test_loader
+
 
 class TransformerModel(nn.Module):
 
@@ -38,25 +88,102 @@ class TransformerModel(nn.Module):
         self.linear.bias.data.zero_()
         self.linear.weight.data.uniform_(-initrange, initrange)
 
+
     def forward(self, src: Tensor, src_mask: Tensor = None) -> Tensor:
+
         """
         Arguments:
             src: Tensor, shape ``[seq_len, batch_size]``
             src_mask: Tensor, shape ``[seq_len, seq_len]``
 
         Returns:
-            output Tensor of shape ``[seq_len, batch_size, ntoken]``
+            output Tensor of shape ``[batch_size, ntoken]``
         """
+                
         src = self.embedding(src) * math.sqrt(self.d_model)
         src = self.pos_encoder(src)
         if src_mask is None:
-            """Generate a square causal mask for the sequence. The masked positions are filled with float('-inf').
-            Unmasked positions are filled with float(0.0).
-            """
-            src_mask = nn.Transformer.generate_square_subsequent_mask(len(src)).to(device)
+            src_mask = nn.Transformer.generate_square_subsequent_mask(src.size(0)).to(src.device)
         output = self.transformer_encoder(src, src_mask)
         output = self.linear(output)
+        output = output.mean(dim=1)
+
         return output
+
+
+
+
+
+    
+    def train_model(self,num_epochs, optimizer, criterion, train_loader, val_loader, patience = 10):
+        best_val_loss = float('inf')
+        stop_count = 0
+        best_model_state = None
+        print("Beginning training & validation")
+        
+        # Training loop
+        for epoch in range(num_epochs):
+            train_loss = 0.0
+            self.train()
+            for i, (data, labels) in enumerate(train_loader):
+                optimizer.zero_grad()
+                output = self.forward(data)
+
+                loss = criterion(output, labels)
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+
+                if i % 1 == 0:  # Print training loss every 20 mini-batches
+                    print(f'\rEpoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(train_loader)}], Loss: {train_loss / (i+1):.4f}', end="")
+            print()
+            self.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for i, (data, labels) in enumerate(val_loader):
+                    outputs = self.forward(data)
+                    loss = criterion(outputs, labels)
+                    val_loss += loss.item()
+
+            avg_val_loss = val_loss / len(val_loader)
+
+
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+                best_model_state = copy.deepcopy(self.state_dict())  # Deep copy the model state
+                stop_count = 0  # Reset the early stopping counter
+                print(f'New best model found at epoch {epoch + 1} with validation loss: {best_val_loss}')
+            else:
+                stop_count += 1  # Increment the counter if no improvement
+                print(f'No improvement in validation loss for epoch {epoch+1}. Early stopping counter: {stop_count}/{patience}')
+                
+                if stop_count >= patience:
+                    print(f'Early stopping triggered at epoch {epoch + 1}. No improvement in validation loss for {patience} consecutive epochs.')
+                    break  # Break out of the loop to stop training
+
+        self.load_state_dict(best_model_state)  
+        return
+    def test_model(self, criterion, test_loader):
+        self.eval()  # Set the model to evaluation mode
+        test_loss = 0.0
+        correct_predictions = 0
+        total_predictions = 0
+
+        with torch.no_grad():  # Disable gradient computation for efficiency
+            for data, labels in test_loader:
+                outputs = self.forward(data)
+                loss = criterion(outputs, labels)
+                test_loss += loss.item()
+
+                _, predicted = torch.max(outputs, 1)  # Get the index of the max log-probability
+                correct_predictions += (predicted == labels).sum().item()
+                total_predictions += labels.size(0)
+
+        avg_test_loss = test_loss / len(test_loader)
+        accuracy = correct_predictions / total_predictions * 100
+        print(f'Test Loss: {avg_test_loss:.4f}, Accuracy: {accuracy:.4f}')
+
     
 class PositionalEncoding(nn.Module):
 
@@ -109,30 +236,32 @@ def chatbot_response(prediction):
 
         negative: ("Negative",
                          "Bad review")
-    }  
+    }
+    return chatbot_responses[prediction.item()][random.randint(0, 1)]
+
 
 
 def main():
 
     
-    train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer, test_x_tensor, test_y_tensor =  data_loading_code.get_data_test()
+    train_x, train_y, val_x, val_y, vocab, test_x, test_y = data_loading_code.get_data_transformer()
+ 
+
 
     NUM_EPOCHS = 50
     LEARNING_RATE = 1e-4
     BATCH_SIZE = 32
-    
 
-    train_loader = DataLoader(TensorDataset(train_x_tensor, train_y_tensor), batch_size=BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(TensorDataset(validation_x_tensor, validation_y_tensor), batch_size=BATCH_SIZE, shuffle=False)
-    test_loader = DataLoader(TensorDataset(test_x_tensor, test_y_tensor), batch_size=BATCH_SIZE, shuffle=False)
+    train_loader, val_loader, test_loader = create_dataloaders(train_x, train_y, val_x, val_y, test_x, test_y, batch_size=BATCH_SIZE)
 
 
-    ntokens = vocab_size  # size of vocabulary
+
+    ntokens = len(vocab)  # size of vocabulary
     emsize = 200  # embedding dimension
     d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
     nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
     nhead = 2  # number of heads in ``nn.MultiheadAttention``
-    dropout = 0.2  # dropout probability
+    dropout = 0.5  # dropout probability
     model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
@@ -140,23 +269,25 @@ def main():
     model.train_model(NUM_EPOCHS, optimizer, criterion, train_loader, val_loader)
     model.test_model(criterion, test_loader)
 
-    model.eval()
 
-    print(f"\nType 'exit' to end the conversation.",
-          sep="\n")
 
-    print("Bot: Give a reivew.")
+    # model.eval()
 
-    while True:
-        text = input("User: ")
-        if text == "exit":
-            break
-        user_prompt = prep_user_input(text, word_vectorizer)
+    # print(f"\nType 'exit' to end the conversation.",
+    #       sep="\n")
 
-        output = model(user_prompt)
-        _, predicted = torch.max(output, 1)
+    # print("Bot: Give a reivew.")
 
-        print("Bot:", chatbot_response(predicted), sep=" ")
+    # while True:
+    #     text = input("User: ")
+    #     if text == "exit":
+    #         break
+    #     user_prompt = prep_user_input(text, word_vectorizer)
+
+    #     output = model(user_prompt)
+    #     _, predicted = torch.max(output, 1)
+
+    #     print("Bot:", chatbot_response(predicted), sep=" ")
 
 if __name__ == "__main__":
     main()

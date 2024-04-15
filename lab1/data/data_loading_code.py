@@ -11,9 +11,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.corpus import stopwords
 from nltk import word_tokenize
 import nltk
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, classification_report
 nltk.download('punkt')
 nltk.download('stopwords')
+
 
 
 def preprocess_pandas(data, columns):
@@ -71,6 +74,17 @@ def get_data():
 
     return train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer
 
+def build_vocab(data, tokenizer):
+    vocab = build_vocab_from_iterator(map(tokenizer, data), specials=["<unk>"])
+    vocab.set_default_index(vocab["<unk>"])
+    return vocab
+
+def data_process(raw_text_iter, vocab, tokenizer):
+    data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
+    return torch.nn.utils.rnn.pad_sequence(data, padding_value=vocab["<pad>"])
+
+
+
 def get_data_test():
     # get data, pre-process and split
     # data = pd.read_csv("/home/convergent/PycharmProjects/Labs D7047E/Lab 1/data/amazon_cells_labelled.txt", delimiter='\t', header=None)
@@ -127,6 +141,41 @@ def get_data_test():
     print("Data loaded and pre-processed successfully")
 
     return train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer, test_x_tensor, test_y_tensor
+
+def get_data_transformer():
+    # Load and preprocess data
+    data = pd.read_csv("lab1/data/amazon_cells_labelled.txt", delimiter='\t', header=None)
+    data.columns = ['Sentence', 'Class']
+    data['index'] = data.index
+
+    # Preprocess sentences (assuming preprocess_pandas is defined correctly to clean the text)
+    columns = ['index', 'Class', 'Sentence']
+    data = preprocess_pandas(data, columns)
+
+    # Tokenization and Vocabulary
+    tokenizer = get_tokenizer('basic_english')
+    vocab = build_vocab_from_iterator(map(tokenizer, data['Sentence']), specials=["<unk>"])
+    vocab.set_default_index(vocab["<unk>"])
+
+    # Splitting data into training, validation, and test sets
+    train_val_data, test_data, train_val_labels, test_labels = train_test_split(
+        data['Sentence'], data['Class'], test_size=0.20, random_state=0, shuffle=True
+    )
+    train_data, val_data, train_labels, val_labels = train_test_split(
+        train_val_data, train_val_labels, test_size=0.25, random_state=0, shuffle=True
+    )
+
+    train_tensor = data_process(train_data, vocab, tokenizer)
+    val_tensor = data_process(val_data, vocab, tokenizer)
+    test_tensor = data_process(test_data, vocab, tokenizer)
+
+    # Convert labels to tensors
+    train_labels = torch.tensor(train_labels.values, dtype=torch.long)
+    val_labels = torch.tensor(val_labels.values, dtype=torch.long)
+    test_labels = torch.tensor(test_labels.values, dtype=torch.long)
+
+    # Returning processed tensors and vocab size
+    return train_tensor, train_labels, val_tensor, val_labels, vocab, test_tensor, test_labels
 
 
 
