@@ -171,10 +171,6 @@ def get_data_transformer():
     )
 
 
-    train_tensor = data_process(train_data, vocab, tokenizer)
-    val_tensor = data_process(val_data, vocab, tokenizer)
-    test_tensor = data_process(test_data, vocab, tokenizer)
-
 
     # Convert labels to tensors
     train_labels = torch.tensor(y_train.values, dtype=torch.long)
