@@ -40,7 +40,7 @@ class TextDataset(Dataset):
 
     def __getitem__(self, idx):
         """Return a single item from the dataset."""
-        return self.text_data[:, idx], self.labels[idx]
+        return self.text_data[idx, :], self.labels[idx]
 
 def create_dataloaders(train_data, train_labels, val_data, val_labels, test_data, test_labels, batch_size=32):
     """
@@ -251,7 +251,7 @@ def main():
 
     NUM_EPOCHS = 50
     LEARNING_RATE = 1e-3
-    BATCH_SIZE = 10
+    BATCH_SIZE = 32
 
     train_loader, val_loader, test_loader = create_dataloaders(train_x, train_y, val_x, val_y, test_x, test_y, batch_size=BATCH_SIZE)
     print(len(train_loader))
