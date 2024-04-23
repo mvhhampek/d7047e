@@ -129,6 +129,7 @@ def prep_user_input(user_input, vectorizer):
 
     return user_tensor
 
+
 def main():
     train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer, test_x_tensor, test_y_tensor =  data_loading_code.get_data_test()
 
@@ -159,7 +160,7 @@ def main():
             break
         user_prompt = prep_user_input(text, word_vectorizer)
 
-        output = model(user_prompt.unsqueeze(0))
+        output = model(user_prompt)
         prediction = (output > 0.5).float()
         
         print("Bot:", chatbot_response(prediction))
