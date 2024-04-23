@@ -179,10 +179,9 @@ class TransformerModel(nn.Module):
 
                 _, predicted = torch.max(outputs, 1)  # Get the index of the max log-probability
                 correct_predictions += (predicted == labels).sum().item()
-                total_predictions += labels.size(0)
 
-        avg_test_loss = test_loss / len(test_loader)
-        accuracy = correct_predictions / total_predictions * 100
+        avg_test_loss = test_loss / len(test_loader.dataset)
+        accuracy = correct_predictions / (len(test_loader.dataset)) * 100
         print(f'Test Loss: {avg_test_loss:.4f}, Accuracy: {accuracy:.4f}')
 
     
@@ -260,7 +259,7 @@ def main():
  
 
 
-    NUM_EPOCHS = 2
+    NUM_EPOCHS = 1
     LEARNING_RATE = 1e-3
     BATCH_SIZE = 32
 
