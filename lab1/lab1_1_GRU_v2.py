@@ -17,11 +17,16 @@ class SentimentClassifier(nn.Module):
         self.hidden_dim = hidden_dim
         self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
+        self.sigmoid = nn.Sigmoid() 
 
     def forward(self, x):
         # Initialize hidden state
         h0 = torch.zeros(1, x.size(0), self.hidden_dim).to(x.device)
-
+        #print("h0_shape:", h0.shape)
+        #print("x_shape:", x.shape)
+        #print("x:", x)
+        x = x.unsqueeze(1)
+       # print("x_shape_v2:", x.shape)
         # Forward pass through GRU
         out, _ = self.gru(x, h0)
 
@@ -30,7 +35,8 @@ class SentimentClassifier(nn.Module):
 
         # Pass the output through the fully-connected layer
         out = self.fc(out)
-
+       
+        out = self.sigmoid(out)
         return out
 
     def train_model(self, num_epochs, optimizer, criterion, train_loader, val_loader, patience=10):
@@ -45,7 +51,7 @@ class SentimentClassifier(nn.Module):
             for i, (data, labels) in enumerate(train_loader):
                 optimizer.zero_grad()
                 output = self.forward(data)
-                loss = criterion(output.squeeze(), labels.float())
+                loss = criterion(output.squeeze(1), labels.float())
                 loss.backward()
                 optimizer.step()
 
