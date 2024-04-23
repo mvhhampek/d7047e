@@ -8,7 +8,37 @@ import torchvision
 
 import copy
 
-def get_data_loaders(train_batch_size, val_batch_size, test_batch_size):
+def get_data_loaders_MNIST(train_batch_size, val_batch_size, test_batch_size):
+    # Define the transformation
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))  # Normalize the images
+    ])
+
+    # Load the full training dataset
+    full_trainset = datasets.MNIST(root='lab0/data', train=True, 
+                                   download=True, transform=transform)
+
+    # Split the full training dataset into training and validation
+    train_size = int(0.8 * len(full_trainset))
+    val_size = len(full_trainset) - train_size
+    train_dataset, val_dataset = random_split(full_trainset, [train_size, val_size])
+
+    # Load the test dataset
+    test_dataset = datasets.MNIST(root='lab0/data', train=False, 
+                                  download=True, transform=transform)
+
+    # Prepare data loaders
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size,
+                              shuffle=True, num_workers=0)
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size,
+                            shuffle=False, num_workers=0)
+    test_loader = DataLoader(test_dataset, batch_size=test_batch_size,
+                             shuffle=False, num_workers=0)
+
+    return train_loader, val_loader, test_loader  
+
+def get_data_loaders_SVHN(train_batch_size, val_batch_size, test_batch_size):
     # Define the transformation
     transform = transforms.Compose([
         transforms.Resize((28, 28)),  # Resize SVHN images to 28x28
@@ -161,11 +191,13 @@ optimizer = optim.Adam(model.parameters(), lr = 0.001, weight_decay=0.005) # wei
 
 num_epochs = 50
 
-train_loader, val_loader, test_loader = get_data_loaders(64, 64, 64)
+train_loader_SVHN, val_loader_SVHN, test_loader_SVHN = get_data_loaders_SVHN(64, 64, 64)
+train_loader_MNIST, val_loader_MNIST, test_loader_MNIST = get_data_loaders_MNIST(64, 64, 64)
 
 if __name__ == '__main__':
     
-    trained_model = train_and_validate(model, num_epochs, optimizer, criterion, train_loader, val_loader)
+    trained_model = train_and_validate(model, num_epochs, optimizer, criterion, train_loader_MNIST, val_loader_MNIST)
     #torch.save(trained_model.state_dict(), 'model_mnist.pth')
-    test(trained_model, test_loader)
-
+    test(trained_model, test_loader_MNIST)
+    trained_model = train_and_validate(trained_model, num_epochs, optimizer, criterion, train_loader_SVHN, val_loader_SVHN)
+    test(trained_model, test_loader_SVHN)
