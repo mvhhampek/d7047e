@@ -229,25 +229,24 @@ def prep_user_input(user_input, vocab, tokenizer):
 
 def data_process_single(raw_text, vocab, tokenizer):
     # Tokenize the raw text
-    tokenized_text = vocab(tokenizer(raw_text))
+    #tokenized_text = vocab(tokenizer(raw_text))
     
     # Convert tokens to tensor and add padding
-    tensor_text = torch.tensor(tokenized_text, dtype=torch.long)
-    max_length = len(tensor_text)
-    padded_text = torch.nn.functional.pad(tensor_text, (0, max_length - len(tensor_text)), value=vocab["<pad>"])
+    #tensor_text = torch.tensor(tokenized_text, dtype=torch.long)
+    #max_length = len(tensor_text)
+    #padded_text = torch.nn.functional.pad(tensor_text, (0, max_length - len(tensor_text)), value=vocab["<pad>"])
     
-    return padded_text
+    tokenized_text = [vocab[token] for token in tokenizer(raw_text)]
+    tensor_text = torch.tensor([tokenized_text], dtype=torch.long)
+    return tensor_text
 
 def chatbot_response(prediction):
     positive = 1
     negative = 0
 
     chatbot_responses: dict[int, tuple[str, str]] = {
-        positive: ("Positive",
-                          "Good review"),
-
-        negative: ("Negative",
-                         "Bad review")
+        positive: ("Positive","Good review"),
+        negative: ("Negative","Bad review")
     }
     return chatbot_responses[prediction.item()][random.randint(0, 1)]
 
@@ -259,7 +258,7 @@ def main():
  
 
 
-    NUM_EPOCHS = 1
+    NUM_EPOCHS = 100
     LEARNING_RATE = 1e-3
     BATCH_SIZE = 32
 
@@ -296,6 +295,7 @@ def main():
 
         output = model(user_prompt)
         _, predicted = torch.max(output, 1)
+        print(predicted)
         print("Bot:", chatbot_response(predicted), sep=" ")
 
 if __name__ == "__main__":
