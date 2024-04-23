@@ -40,7 +40,7 @@ class TextDataset(Dataset):
 
     def __getitem__(self, idx):
         """Return a single item from the dataset."""
-        return self.text_data[:, idx], self.labels[idx]
+        return self.text_data[idx, :], self.labels[idx]
 
 def create_dataloaders(train_data, train_labels, val_data, val_labels, test_data, test_labels, batch_size=32):
     """
@@ -55,6 +55,7 @@ def create_dataloaders(train_data, train_labels, val_data, val_labels, test_data
         Three DataLoader instances for the training, validation, and test datasets.
     """
     # Create Dataset instances
+
     train_dataset = TextDataset(train_data, train_labels)
     val_dataset = TextDataset(val_data, val_labels)
     test_dataset = TextDataset(test_data, test_labels)
@@ -207,8 +208,8 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
     
 
-def prep_user_input(user_input, vectorizer):
-        # Preprocess user input
+def prep_user_input(user_input, vocab, tokenizer):
+    # Preprocess user input
     user_input = user_input.lower()
     user_input = re.sub(r'[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_.]+', '', user_input)  # remove emails
     user_input = re.sub(r'((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}', '', user_input)  # remove IP address
@@ -218,13 +219,25 @@ def prep_user_input(user_input, vectorizer):
     filtered_sent = [w for w in word_tokens if not w in stopwords.words('english')]
     processed_input = " ".join(filtered_sent)
 
-    # Vectorize user input using the provided TF-IDF vectorizer
-    user_tfidf = vectorizer.transform([processed_input])
+    # # Vectorize user input using the provided TF-IDF vectorizer
+    # user_tfidf = vectorizer.transform([processed_input])
 
-    # Convert to PyTorch tensor
-    user_tensor = torch.tensor(user_tfidf.toarray(), dtype=torch.float32)
+    # # Convert to PyTorch tensor
+    # user_tensor = torch.tensor(user_tfidf.toarray(), dtype=torch.float32)
+    user_tensor = data_process_single(processed_input,vocab, tokenizer)
 
     return user_tensor
+
+def data_process_single(raw_text, vocab, tokenizer):
+    # Tokenize the raw text
+    tokenized_text = vocab(tokenizer(raw_text))
+    
+    # Convert tokens to tensor and add padding
+    tensor_text = torch.tensor(tokenized_text, dtype=torch.long)
+    max_length = len(tensor_text)
+    padded_text = torch.nn.functional.pad(tensor_text, (0, max_length - len(tensor_text)), value=vocab["<pad>"])
+    
+    return padded_text
 
 def chatbot_response(prediction):
     positive = 1
@@ -243,27 +256,25 @@ def chatbot_response(prediction):
 
 def main():
 
-    
-    train_x, train_y, val_x, val_y, vocab, test_x, test_y = data_loading_code.get_data_transformer()
+    train_x, train_y, val_x, val_y, test_x, test_y, vocab, tokenizer = data_loading_code.get_data_transformer()
  
 
 
-    NUM_EPOCHS = 50
-    LEARNING_RATE = 1e-4
+    NUM_EPOCHS = 2
+    LEARNING_RATE = 1e-3
     BATCH_SIZE = 32
 
     train_loader, val_loader, test_loader = create_dataloaders(train_x, train_y, val_x, val_y, test_x, test_y, batch_size=BATCH_SIZE)
 
 
-
     ntokens = len(vocab)  # size of vocabulary
-    emsize = 200  # embedding dimension
-    d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+    emsize = 256  # embedding dimension
+    d_hid = 512  # dimension of the feedforward network model in ``nn.TransformerEncoder``
     nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
-    nhead = 2  # number of heads in ``nn.MultiheadAttention``
+    nhead = 8  # number of heads in ``nn.MultiheadAttention``
     dropout = 0.5  # dropout probability
     model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
-
+    print("Model initialized")
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss()
     model.train_model(NUM_EPOCHS, optimizer, criterion, train_loader, val_loader)
@@ -271,23 +282,22 @@ def main():
 
 
 
-    # model.eval()
+    model.eval()
 
-    # print(f"\nType 'exit' to end the conversation.",
-    #       sep="\n")
+    print(f"\nType 'exit' to end the conversation.",
+          sep="\n")
 
-    # print("Bot: Give a reivew.")
+    print("Bot: Give a reivew.")
 
-    # while True:
-    #     text = input("User: ")
-    #     if text == "exit":
-    #         break
-    #     user_prompt = prep_user_input(text, word_vectorizer)
+    while True:
+        text = input("User: ")
+        if text == "exit":
+            break
+        user_prompt = prep_user_input(text, vocab, tokenizer)
 
-    #     output = model(user_prompt)
-    #     _, predicted = torch.max(output, 1)
-
-    #     print("Bot:", chatbot_response(predicted), sep=" ")
+        output = model(user_prompt)
+        _, predicted = torch.max(output, 1)
+        print("Bot:", chatbot_response(predicted), sep=" ")
 
 if __name__ == "__main__":
     main()

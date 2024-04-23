@@ -79,11 +79,17 @@ def build_vocab(data, tokenizer):
     vocab.set_default_index(vocab["<unk>"])
     return vocab
 
-def data_process(raw_text_iter, vocab, tokenizer):
+def data_process1(raw_text_iter, vocab, tokenizer):
     data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
     return torch.nn.utils.rnn.pad_sequence(data, padding_value=vocab["<pad>"])
 
 
+
+def data_process(raw_text_iter, vocab, tokenizer):
+    data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
+    max_length = max(len(sequence) for sequence in data)
+    padded_data = [torch.nn.functional.pad(sequence, (0, max_length - len(sequence)), value=vocab["<pad>"]) for sequence in data]
+    return torch.stack(padded_data)
 
 def get_data_test():
     # get data, pre-process and split
@@ -142,6 +148,7 @@ def get_data_test():
 
     return train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer, test_x_tensor, test_y_tensor
 
+
 def get_data_transformer():
     # Load and preprocess data
     data = pd.read_csv("lab1/data/amazon_cells_labelled.txt", delimiter='\t', header=None)
@@ -175,11 +182,53 @@ def get_data_transformer():
     test_labels = torch.tensor(test_labels.values, dtype=torch.long)
 
     # Returning processed tensors and vocab size
-    return train_tensor, train_labels, val_tensor, val_labels, vocab, test_tensor, test_labels
+    return train_tensor, train_labels, val_tensor, val_labels, test_tensor, test_labels, vocab, tokenizer
+
+
+
+def get_data_transformer1():
+ # Load and preprocess data
+    data = pd.read_csv("lab1/data/amazon_cells_labelled.txt", delimiter='\t', header=None)
+    data.columns = ['Sentence', 'Class']
+    data['index'] = data.index
+
+    # Assuming preprocess_pandas is defined to clean and normalize the text
+    columns = ['index', 'Class', 'Sentence']
+    data = preprocess_pandas(data, columns)
+
+    # Initialize and fit the TfidfVectorizer
+    vectorizer = TfidfVectorizer(lowercase=True, stop_words='english', tokenizer=get_tokenizer('basic_english'))
+    X = vectorizer.fit_transform(data['Sentence'])
+    vocab_size = len(vectorizer.vocabulary_)
+    
+    
+    # Splitting data into training, validation, and test sets
+    X_train_val, X_test, y_train_val, y_test = train_test_split(
+        X, data['Class'], test_size=0.20, random_state=0, shuffle=True
+    )
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_train_val, y_train_val, test_size=0.25, random_state=0, shuffle=True
+    )
+
+
+
+    # Convert labels to tensors
+    train_labels = torch.tensor(y_train.values, dtype=torch.long)
+    val_labels = torch.tensor(y_val.values, dtype=torch.long)
+    test_labels = torch.tensor(y_test.values, dtype=torch.long)
+
+    # Convert sparse matrix to tensors
+    train_tensor = torch.tensor(X_train.toarray(), dtype=torch.float32)
+    val_tensor = torch.tensor(X_val.toarray(), dtype=torch.float32)
+    test_tensor = torch.tensor(X_test.toarray(), dtype=torch.float32)
+
+    # Returning processed tensors and vocab size, and vectorizer
+    return train_tensor, train_labels, val_tensor, val_labels, test_tensor, test_labels, vectorizer, vocab_size
+
 
 
 
 # If this is the primary file that is executed (ie not an import of another file)
 if __name__ == "__main__":
     
-    train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer = get_data()
+    train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer = get_data_transformer()
