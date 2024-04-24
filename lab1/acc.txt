@@ -1,6 +1,7 @@
 Task 1_1, LSTM : 81.5% accuracy
+Task 1_1, GRU : 82.0% accuracy
 
-Task 1_2, Transformer: 62.00% accuracy
+Task 1_2, Transformer: 66.50% accuracy
 
 Task 1_3: Compare the performance of the two models and explain in which scenarios
 you would prefer one over the other.
@@ -9,8 +10,25 @@ you would prefer one over the other.
         LSTMs bra för small-medium datasets, Transformer bra för stora dataset
         Transformer är mycket mer komplex med fler parametrar
         Transformer är mycket mer effektiv att träna, går fortare
+
+        Each cell in a GRU network has fewer parameters than a cell in a Transformer. GRU processes data sequentially each input
+        leads to a hidden state and an output, you can therefore not train the GRU in paralell. The transformer on the other hand 
+        relies on self-attention mechanisms, it processes all the data in paralell making them very efficient to train on GPUs. GRUs
+        are less computationally expensive per timestep.
+
+        for this task we have somewhat limited data, with short sentences were 
+        the classification isn't that hard. this fits the more simple GRU model
+        better than it does the Transformer. the transformer is metter suited
+        when ther is loads of data and long term dependences, and there simply
+        that kind of long term dependences in this data.
         
 
 
     What insights did you obtain concerning data amount to train? Embed-
     diutilizedised? Architectural choices made?
+
+        We believe there might be too little data to relablty create a working transformer model.
+        
+        in the 1_1 task we started of using a LSTM model but since the provided data doesnt really
+        need the long term memory of the LSTM we also created a GRU model that had somewhat better
+        accuracy.
