@@ -17,25 +17,16 @@ class SentimentClassifier(nn.Module):
         self.hidden_dim = hidden_dim
         self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
-        self.sigmoid = nn.Sigmoid() 
+        self.sigmoid = nn.Sigmoid()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def forward(self, x):
-        # Initialize hidden state
+        # Initialize hidden state with device-aware code
         h0 = torch.zeros(1, x.size(0), self.hidden_dim).to(x.device)
-        #print("h0_shape:", h0.shape)
-        #print("x_shape:", x.shape)
-        #print("x:", x)
         x = x.unsqueeze(1)
-       # print("x_shape_v2:", x.shape)
-        # Forward pass through GRU
         out, _ = self.gru(x, h0)
-
-        # Only take the output from the final time step
-        out = out[:, -1, :]
-
-        # Pass the output through the fully-connected layer
+        out = out[:, -1, :]  # Only take the output from the final time step
         out = self.fc(out)
-       
         out = self.sigmoid(out)
         return out
 
@@ -46,21 +37,22 @@ class SentimentClassifier(nn.Module):
         print("Beginning training & validation")
 
         for epoch in range(num_epochs):
-            train_loss = 0.0
             self.train()
-            for i, (data, labels) in enumerate(train_loader):
+            train_loss = 0.0
+            for data, labels in train_loader:
+                data, labels = data.to(self.device), labels.to(self.device)
                 optimizer.zero_grad()
                 output = self.forward(data)
-                loss = criterion(output.squeeze(1), labels.float())
+                loss = criterion(output.squeeze(), labels.float())
                 loss.backward()
                 optimizer.step()
-
                 train_loss += loss.item()
 
             self.eval()
             val_loss = 0.0
             with torch.no_grad():
-                for i, (data, labels) in enumerate(val_loader):
+                for data, labels in val_loader:
+                    data, labels = data.to(self.device), labels.to(self.device)
                     outputs = self.forward(data)
                     loss = criterion(outputs.squeeze(), labels.float())
                     val_loss += loss.item()
@@ -71,17 +63,19 @@ class SentimentClassifier(nn.Module):
                 best_val_loss = avg_val_loss
                 best_model_state = copy.deepcopy(self.state_dict())
                 stop_count = 0
-                print(f'New best model found at epoch {epoch + 1} with validation loss: {best_val_loss}')
             else:
                 stop_count += 1
-                print(f'No improvement in validation loss for epoch {epoch+1}. Early stopping counter: {stop_count}/{patience}')
-                
-                if stop_count >= patience:
-                    print(f'Early stopping triggered at epoch {epoch + 1}. No improvement in validation loss for {patience} consecutive epochs.')
-                    break
 
-        self.load_state_dict(best_model_state)
-        return
+            print(f'Epoch {epoch + 1}: Validation loss = {avg_val_loss:.4f}', end="")
+            if stop_count>0:
+                print(f" Early stopping counter = {stop_count}/{patience}", end="")
+            print()
+            if stop_count >= patience:
+                print(f'Early stopping triggered after {epoch + 1} epochs.')
+                break
+
+        if best_model_state:
+            self.load_state_dict(best_model_state)
 
     def test_model(self, criterion, test_loader):
         self.eval()
@@ -91,17 +85,17 @@ class SentimentClassifier(nn.Module):
 
         with torch.no_grad():
             for data, labels in test_loader:
+                data, labels = data.to(self.device), labels.to(self.device)
                 outputs = self.forward(data)
                 loss = criterion(outputs.squeeze(), labels.float())
                 test_loss += loss.item()
 
-                predicted = (outputs > 0.5).float()
+                predicted = (outputs.squeeze() >= 0.5).float()
                 correct_predictions += (predicted == labels).sum().item()
                 total_predictions += labels.size(0)
 
-        avg_test_loss = test_loss / len(test_loader)
-        accuracy = correct_predictions / total_predictions * 100
-        print(f'Test Loss: {avg_test_loss:.4f}, Accuracy: {accuracy:.4f}')
+        accuracy = (correct_predictions / total_predictions) * 100
+        print(f'Test Loss: {test_loss / len(test_loader):.4f}, Accuracy: {accuracy:.2f}%')
 
 def chatbot_response(prediction):
     positive = 1
@@ -133,8 +127,9 @@ def prep_user_input(user_input, vectorizer):
 def main():
     train_x_tensor, train_y_tensor, validation_x_tensor, validation_y_tensor, vocab_size, word_vectorizer, test_x_tensor, test_y_tensor =  data_loading_code.get_data_test()
 
-    NUM_EPOCHS = 50
-    LEARNING_RATE = 1e-4
+    # Set parameters
+    NUM_EPOCHS = 100
+    LEARNING_RATE = 5e-4
     BATCH_SIZE = 32
 
     train_loader = DataLoader(TensorDataset(train_x_tensor, train_y_tensor), batch_size=BATCH_SIZE, shuffle=True)
@@ -142,9 +137,11 @@ def main():
     test_loader = DataLoader(TensorDataset(test_x_tensor, test_y_tensor), batch_size=BATCH_SIZE, shuffle=False)
 
     input_dim = vocab_size
-    hidden_dim = 250
-    output_dim = 1  # Binary classification
+    hidden_dim = 200
+    output_dim = 1
     model = SentimentClassifier(input_dim, hidden_dim, output_dim)
+    model.to(model.device)
+
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
     criterion = nn.BCELoss()
@@ -153,12 +150,13 @@ def main():
 
     print(f"\nType 'exit' to end the conversation.")
     print("Bot: Give a review.")
-
     while True:
         text = input("User: ")
         if text == "exit":
             break
         user_prompt = prep_user_input(text, word_vectorizer)
+        
+        user_prompt = user_prompt.to(model.device)
 
         output = model(user_prompt)
         prediction = (output > 0.5).float()
