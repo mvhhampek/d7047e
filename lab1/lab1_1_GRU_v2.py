@@ -11,6 +11,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk import word_tokenize
 from nltk.corpus import stopwords
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
+
 class SentimentClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(SentimentClassifier, self).__init__()
@@ -82,7 +85,7 @@ class SentimentClassifier(nn.Module):
 
         self.load_state_dict(best_model_state)
         return
-
+    
     def test_model(self, criterion, test_loader):
         self.eval()
         test_loss = 0.0
@@ -96,12 +99,12 @@ class SentimentClassifier(nn.Module):
                 test_loss += loss.item()
 
                 predicted = (outputs > 0.5).float()
-                correct_predictions += (predicted == labels).sum().item()
-                total_predictions += labels.size(0)
+                correct_predictions += (predicted == labels.unsqueeze(1)).sum().item()  # Compare with labels
+                total_predictions += labels.size(0)  # Increase total predictions by batch size
 
         avg_test_loss = test_loss / len(test_loader)
-        accuracy = correct_predictions / total_predictions * 100
-        print(f'Test Loss: {avg_test_loss:.4f}, Accuracy: {accuracy:.4f}')
+        accuracy = correct_predictions / total_predictions * 100  # Calculate accuracy
+        print(f'Test Loss: {avg_test_loss:.4f}, Accuracy: {accuracy:.4f}%')
 
 def chatbot_response(prediction):
     positive = 1
