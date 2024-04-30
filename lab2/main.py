@@ -71,7 +71,7 @@ class Generator(nn.Module):
             *block(128, 256),
             *block(256, 512),
             *block(512, 1024),
-            nn.Linear(1024, channels*img_size*img_size), # 
+            nn.Linear(1024, channels*img_size*img_size), # (1024, 784)
             nn.Tanh() # result : from -1 to 1
         )
 
@@ -190,7 +190,7 @@ def main():
 
     train_loader_MNIST, val_loader_MNIST, test_loader_MNIST = get_data_loaders_MNIST(64, 64, 64)
 
-    model=train(5, generator, discriminator, optimizer_G, optimizer_D, adversarial_loss, train_loader_MNIST)
+    model=train(10000, generator, discriminator, optimizer_G, optimizer_D, adversarial_loss, train_loader_MNIST)
 
 
 if __name__ == "__main__":
