@@ -220,12 +220,13 @@ def create_plot_adversarial_images(x_image, y_label, model, lr=0.1, n_steps=1, o
     return probs_per_step
 
 # Pick a random 2 image from first 1000 images 
-index_of_2s = np.where(np.array(test_dataset.targets) == 2)[0][:1000]
-rand_index = np.random.randint(0, len(index_of_2s))
-image_norm = test_dataset[index_of_2s[rand_index]][0].unsqueeze(0).to(device)
+index_of_4s = np.where(np.array(test_dataset.targets) == 4)[0][:1000]
+rand_index = np.random.randint(0, len(index_of_4s))
+image_norm = test_dataset[index_of_4s[rand_index]][0].unsqueeze(0).to(device)
 
-# Create adversarial label (target label 6)
+# Create adversarial label (target label 9)
 label_adv = torch.zeros(1, 10).to(device)
-label_adv[0, 6] = 1
+label_adv[0, 9] = 1  # Change index to 9 for the target label
+
 
 create_plot_adversarial_images(image_norm, label_adv, model, lr=1, n_steps=10)
