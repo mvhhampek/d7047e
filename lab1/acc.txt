@@ -1,5 +1,5 @@
 Task 1_1, LSTM : 81.5% accuracy
-Task 1_1, GRU : 82.0% accuracy
+Task 1_1, GRU : 83.0% accuracy
 
 Task 1_2, Transformer: 66.50% accuracy
 
