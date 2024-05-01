@@ -1,0 +1,16 @@
+Difference between GAN, CGAN, Stable Diffusion:
+    GAN:
+        Consists of generator & discriminator, generates fake images from random noise, discriminator tries to distinguish real from fake
+        Trained simulatenously in a min-max game
+        GAN training can be unstable, achieving good results often requires careful hyperparameter tuning
+
+    CGAN:
+        Extends concept of GANs by introducing conditional information to generator & discriminator
+        CGAN take conditional information as input (e.g. class labels) in addition to random noise
+        Allows for more control over the generated samples
+
+    Stable Diffusion:
+        Generative model that leverages the concept of diffusion processes to generate images
+        Noise is gradually added to a starting image to create a sequ3ence of intermediate noisy images
+        By slowly reducing the noise level, the model learns to generate realistic images from the noisy intermediate images
+        Requires storing intermediate noisy images during training - computationally expensive
