@@ -3,6 +3,7 @@ Difference between GAN, CGAN, Stable Diffusion:
         Consists of generator & discriminator, generates fake images from random noise, discriminator tries to distinguish real from fake
         Trained simulatenously in a min-max game
         GAN training can be unstable, achieving good results often requires careful hyperparameter tuning
+        Results in mode collapse (only generates 1s)
 
     CGAN:
         Extends concept of GANs by introducing conditional information to generator & discriminator
