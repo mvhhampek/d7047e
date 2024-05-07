@@ -146,7 +146,6 @@ def plot_images_with_predictions(model, test_loader, num_images=9):
 
 
 
-# Assuming test_loader is defined
 plot_images_with_predictions(model, test_loader)
 
 

@@ -12,6 +12,6 @@ Difference between GAN, CGAN, Stable Diffusion:
 
     Stable Diffusion:
         Generative model that leverages the concept of diffusion processes to generate images
-        Noise is gradually added to a starting image to create a sequ3ence of intermediate noisy images
+        Noise is gradually added to a starting image to create a sequence of intermediate noisy images
         By slowly reducing the noise level, the model learns to generate realistic images from the noisy intermediate images
         Requires storing intermediate noisy images during training - computationally expensive
