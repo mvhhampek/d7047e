@@ -244,7 +244,7 @@ def main():
 
     train_loader_MNIST= get_data_loader(64)
 
-    train(30, generator, discriminator, optimizer_G, optimizer_D, adversarial_loss, train_loader_MNIST)
+    train(107, generator, discriminator, optimizer_G, optimizer_D, adversarial_loss, train_loader_MNIST)
     generate(generator,64)
 
 if __name__ == "__main__":
