@@ -190,7 +190,7 @@ def generate(generator,size):
 
     sample_gen_imgs_in_train = generator(sample_z_in_train).detach().cpu()   
     nrow=1
-    ncols=5
+    ncols=10
     fig, axes = plt.subplots(nrows=nrow,ncols=ncols, figsize=(8,2))
     plt.suptitle('generated img')
     for ncol in range(ncols):
@@ -216,13 +216,15 @@ def main():
     generator = Generator()
     discriminator = Discriminator()
 
-    optimizer_G = torch.optim.Adam(generator.parameters(), lr=lr, betas=(b1,b2))
-    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(b1,b2))
+    #optimizer_G = torch.optim.Adam(generator.parameters(), lr=lr, betas=(b1,b2))
+    optimizer_G = torch.optim.SGD(generator.parameters(), lr=lr, momentum=0.9)
+    #optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(b1,b2))
+    optimizer_D = torch.optim.SGD(discriminator.parameters(), lr=lr, momentum=0.9)
     adversarial_loss = torch.nn.BCELoss()
 
     train_loader_MNIST= get_data_loader(64)
 
-    train(5, generator, discriminator, optimizer_G, optimizer_D, adversarial_loss, train_loader_MNIST)
+    train(107, generator, discriminator, optimizer_G, optimizer_D, adversarial_loss, train_loader_MNIST)
     generate(generator,64)
 
 if __name__ == "__main__":
