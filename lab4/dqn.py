@@ -56,16 +56,31 @@ class QNetwork(nn.Module):
         # TODO: Deinfe your network (agent)
         # Look at Section 4.1 in the paper for help: https://arxiv.org/pdf/1312.5602v1.pdf
         self.network = nn.Sequential(
+            # Input consists of an 84x84x4 image
 
+            # First layer convolves 16 8x8 filters with stride 4
+            nn.Conv2d(4,16,kernel_size = 8, stride = 4),
+            # And applies a rectifier nonlinearity
+            nn.ReLU(),
 
+            # Second conv layer convolves 32 4x4 filters with stride 2 followed by ReLu
+            nn.Conv2d(16,32,kernel_size = 4, stride = 2),
+            nn.ReLU(),
+            # Flatten layer to transition from conv to fc
+            nn.Flatten(),
+            # Final hidden layer is fc and consists of 256 rectifier units
+            nn.Linear(32 * 9 * 9, 256), # input size calculated based on output from last conv layer
+            nn.ReLU(),
+            # Output layer is a fc linear layer with a single output for each valid action
+ 
 
-
-
-            nn.Linear(512, env.single_action_space.n)                
+            nn.Linear(256, env.single_action_space.n)                
         )
 
     def forward(self, x):
-        return self.network(x / 255.0)
+        x = x.float() / 255.0
+        
+        return self.network(x)
 
 
 def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
@@ -110,10 +125,11 @@ if __name__ == "__main__":
         epsilon = linear_schedule(params.start_e, params.end_e, params.exploration_fraction * params.total_timesteps, global_step)
 
         if random.random() < epsilon:
-            actions = # TODO: sample a random action from the environment 
+            actions = envs.single_action_space.sample() # TODO: sample a random action from the environment 
         else:
-            q_values = # TODO: get q_values from the network you defined, what should the network receive as input?
-            actions = torch.argmax(q_values, dim=1).cpu().numpy()
+            with torch.no_grad():
+                q_values = q_network(torch.tensor(obs, dtype=torch.float32, device = device)) # TODO: get q_values from the network you defined, what should the network receive as input?
+                actions = torch.argmax(q_values, dim=1).cpu().numpy() # select actions with highest q value
 
         # Take a step in the environment
         next_obs, rewards, dones, infos = envs.step(actions)
@@ -143,12 +159,13 @@ if __name__ == "__main__":
                 # data.observation, data.rewards, data.dones, data.actions
 
                 with torch.no_grad():
+                    next_q_values = q_network(torch.tensor(data.next_obs, dtype = torch.float32, device = device))
                     # Now we calculate the y_j for non-terminal phi.
-                    target_max, _ = # TODO: Calculate max Q
-                    td_target = # TODO: Calculate the td_target (y_j)
+                    target_max = next_q_values.max(dim=1)[0] # TODO: Calculate max Q
+                    td_target = data.rewards + (params.discount_dactor * target_max * (1-data.dones))# TODO: Calculate the td_target (y_j)
 
-                old_val = q_network(?).gather(1, data.actions).squeeze()
-                loss = F.mse_loss(?, ?) 
+                old_val =  q_network(torch.tensor(data.observation, dtype=torch.float32, device=device)).gather(1, torch.tensor(data.actions, device=device).unsqueeze(1)).squeeze(1)
+                loss = F.mse_loss(old_val, td_target) 
 
                 # perform our gradient decent step
                 optimizer.zero_grad()
