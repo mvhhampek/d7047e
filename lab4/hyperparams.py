@@ -7,16 +7,16 @@ class Hyperparameters:
     capture_video = True
     save_model = True
     
-    total_timesteps = 10_000_000
+    total_timesteps = 150000
     learning_rate = 1e-4
-    buffer_size = 1_000_000
+    buffer_size = 1_000_00
     gamma = 0.99
     tau = 1
     target_network_frequency = 1000
     batch_size = 32
     start_e = 1
     end_e = 0.01
-    exploration_fraction = 0.1
-    learning_starts = 80_000
+    exploration_fraction = 0.3
+    learning_starts = 50_000
     train_frequency = 4
 

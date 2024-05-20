@@ -33,6 +33,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if capture_video:
             if idx == 0:
                 env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+            
         env = NoopResetEnv(env, noop_max=30)
         env = MaxAndSkipEnv(env, skip=4)
         env = EpisodicLifeEnv(env)
@@ -88,6 +89,7 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     return max(slope * t + start_e, end_e)
 
 if __name__ == "__main__":
+    best_return = -float('inf')
     run_name = f"{params.env_id}__{params.exp_name}__{params.seed}__{int(time.time())}"
 
     random.seed(params.seed)
@@ -99,7 +101,10 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.SyncVectorEnv([make_env(params.env_id, params.seed, 0, params.capture_video, run_name)])
+
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
+
+
 
     q_network = QNetwork(envs).to(device)
     optimizer = optim.Adam(q_network.parameters(), lr=params.learning_rate)
@@ -125,7 +130,8 @@ if __name__ == "__main__":
         epsilon = linear_schedule(params.start_e, params.end_e, params.exploration_fraction * params.total_timesteps, global_step)
 
         if random.random() < epsilon:
-            actions = envs.single_action_space.sample() # TODO: sample a random action from the environment 
+            # TODO: sample a random action from the environment 
+            actions = [envs.single_action_space.sample() for _ in range(envs.num_envs)] 
         else:
             with torch.no_grad():
                 q_values = q_network(torch.tensor(obs, dtype=torch.float32, device = device)) # TODO: get q_values from the network you defined, what should the network receive as input?
@@ -139,6 +145,18 @@ if __name__ == "__main__":
             if "episode" in info.keys():
                 print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                 break
+
+        for idx, done in enumerate(dones):
+            if done:
+                episodic_return = infos[idx].get('episode', {}).get('r', 0)
+                #print(f"global_step={global_step}, episodic_return={episodic_return}")
+                if episodic_return > best_return:
+                    best_return = episodic_return
+                    best_model_path = f"runs/{run_name}/{params.exp_name}_best_model.pth"
+                    os.makedirs(os.path.dirname(best_model_path), exist_ok=True)  # Ensure directory exists
+                    torch.save(q_network.state_dict(), best_model_path)
+                    print(f"New best model saved with return {best_return} to {best_model_path}")
+
 
         # Save data to replay buffer
         real_next_obs = next_obs.copy()
@@ -159,13 +177,26 @@ if __name__ == "__main__":
                 # data.observation, data.rewards, data.dones, data.actions
 
                 with torch.no_grad():
-                    next_q_values = q_network(torch.tensor(data.next_obs, dtype = torch.float32, device = device))
+                    # Convert numpy arrays to PyTorch tensors
+                    rewards = data.rewards.clone().detach().to(torch.float32)
+                    dones = data.dones.clone().detach().to(torch.float32)
+                    
+                    # Expand tensors to match the batch size
+                    rewards = rewards.squeeze(1)  # Adjust the number '32' based on your actual batch size
+                    dones = dones.squeeze(1)
+                    next_q_values = q_network(data.next_observations.to(device=device, dtype=torch.float32))
                     # Now we calculate the y_j for non-terminal phi.
                     target_max = next_q_values.max(dim=1)[0] # TODO: Calculate max Q
-                    td_target = data.rewards + (params.discount_dactor * target_max * (1-data.dones))# TODO: Calculate the td_target (y_j)
-
-                old_val =  q_network(torch.tensor(data.observation, dtype=torch.float32, device=device)).gather(1, torch.tensor(data.actions, device=device).unsqueeze(1)).squeeze(1)
-                loss = F.mse_loss(old_val, td_target) 
+                    #print("rewards shape:", rewards.shape)
+                    #print("target_max shape:", target_max.shape)
+                    #print("dones shape:", dones.shape)
+                    td_target = rewards + (params.gamma * target_max * (1-dones))# TODO: Calculate the td_target (y_j)
+                temp_q = q_network(data.observations)
+                temp_a = data.actions
+                old_val = temp_q.gather(1,temp_a).squeeze(1)
+                #print("old_val shape:", old_val.shape)
+                #print("td_target shape:", td_target.shape)
+                loss = F.mse_loss(old_val, td_target)
 
                 # perform our gradient decent step
                 optimizer.zero_grad()
