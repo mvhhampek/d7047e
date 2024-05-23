@@ -150,9 +150,9 @@ if __name__ == "__main__":
             if done:
                 episodic_return = infos[idx].get('episode', {}).get('r', 0)
                 #print(f"global_step={global_step}, episodic_return={episodic_return}")
-                if episodic_return > best_return:
+                if episodic_return > best_return and global_step > params.learning_starts:
                     best_return = episodic_return
-                    best_model_path = f"runs/{run_name}/{params.exp_name}_best_model.pth"
+                    best_model_path = f"runs/{run_name}/best_model_{global_step}.pth"
                     os.makedirs(os.path.dirname(best_model_path), exist_ok=True)  # Ensure directory exists
                     torch.save(q_network.state_dict(), best_model_path)
                     print(f"New best model saved with return {best_return} to {best_model_path}")
@@ -211,7 +211,7 @@ if __name__ == "__main__":
                     )
 
     if params.save_model:
-        model_path = f"runs/{run_name}/{params.exp_name}_model"
+        model_path = f"runs/{run_name}/{params.exp_name}_model.pth"
         torch.save(q_network.state_dict(), model_path)
         print(f"model saved to {model_path}")
 

@@ -64,7 +64,8 @@ env = gym.vector.SyncVectorEnv([make_env(env_id, seed, idx, capture_video, run_n
 
 
 observation= env.reset(seed=42)
-model_path =  "C:/Users/admin/Documents/GitHub/d7047e/lab4/runs/BreakoutNoFrameskip-v4__DQN_Breakout__1__1716217969/DQN_Breakout_best_model.pth"
+model_path =  "C:/Users/admin/Documents/GitHub/d7047e/lab4/runs/BreakoutNoFrameskip-v4__DQN_Breakout__1__1716313496/best_model_545562.pth"
+
 state_dict = torch.load(model_path)
 qn = dqn.QNetwork(env)
 qn.load_state_dict(state_dict)
